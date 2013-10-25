@@ -31,6 +31,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import mdc.xacml.impl.DefaultAttributeCounter;
+import mdc.xacml.impl.HardcodedEnvironmentAttributeModule;
+import mdc.xacml.impl.SimplePolicyFinderModule;
 import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
 
 import com.sun.xacml.AbstractPolicy;
@@ -44,6 +47,8 @@ import com.sun.xacml.finder.AttributeFinder;
 import com.sun.xacml.finder.AttributeFinderModule;
 import com.sun.xacml.finder.PolicyFinder;
 import com.sun.xacml.finder.PolicyFinderModule;
+import com.sun.xacml.remote.RemotePolicyEvaluator;
+import com.sun.xacml.remote.RemotePolicyEvaluatorModule;
 import com.sun.xacml.support.finder.PolicyReader;
 
 /**
@@ -63,6 +68,12 @@ public class MultiPolicyPDP {
 	 * Store it in this variable.
 	 */
 	private AttributeFinder attributeFinder;
+	
+	/**
+	 * The remote policy evaluator does not have to be constructed for every policy request.
+	 * Store it in this variable.
+	 */
+	private RemotePolicyEvaluator remotePolicyEvaluator; 
 	
 	/**
 	 * The map of ids -> policy objects.
@@ -90,6 +101,12 @@ public class MultiPolicyPDP {
         //attributeModules.add(selectorAttributeModule);
         //attributeModules.add(localAttributeFinderModule);
         attributeFinder.setModules(attributeModules);
+        
+        // Also set up the remote policy evaluator
+        remotePolicyEvaluator = new RemotePolicyEvaluator();
+        Set<RemotePolicyEvaluatorModule> remotePolicyEvaluatorModules = new HashSet<RemotePolicyEvaluatorModule>();
+        remotePolicyEvaluatorModules.add(new CentralPUMAPolicyEvaluatorModule());
+        remotePolicyEvaluator.setModules(remotePolicyEvaluatorModules);
 	}
 	
 	/**
@@ -120,7 +137,7 @@ public class MultiPolicyPDP {
 		// if supported, evaluate the appropriate policy
 		BasicEvaluationCtx ctx;
 		try {
-			ctx = new BasicEvaluationCtx(request, attributeFinder, null, new DefaultAttributeCounter());
+			ctx = new BasicEvaluationCtx(request, attributeFinder, remotePolicyEvaluator, new DefaultAttributeCounter());
 		} catch (ParsingException e) {
 			logger.log(Level.SEVERE, "Parsing exception here??", e);
 			return null;
@@ -142,7 +159,7 @@ public class MultiPolicyPDP {
         Set<PolicyFinderModule> policyModules = new HashSet<PolicyFinderModule>();
         policyModules.add(simplePolicyFinderModule);
         policyFinder.setModules(policyModules);
-		return new PDP(new PDPConfig(attributeFinder, policyFinder, null, null, new DefaultAttributeCounter()));
+		return new PDP(new PDPConfig(attributeFinder, policyFinder, null, remotePolicyEvaluator, new DefaultAttributeCounter()));
 	}
 	
 	/**

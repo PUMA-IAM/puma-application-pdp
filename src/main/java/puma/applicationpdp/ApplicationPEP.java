@@ -1,6 +1,7 @@
 package puma.applicationpdp;
 
 import java.io.InputStream;
+import java.security.InvalidParameterException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,13 +32,18 @@ import com.sun.xacml.ctx.Result;
  * The main (only) class for accessing the Application PDP from the application. 
  * 
  * NOTICE: the PDP should be initialized using initializePDP(dir)
-		   before the first call to isAuthorized()
+ *		   before the first call to isAuthorized().
+ *
+ * NOTICE: the PEP just asks the PDP to evaluate the policy with id "application-policy",
+ * 		   so make sure this one is present and know that the rest will not be evaluated.
  * 
  * @author Maarten Decat
  *
  */
 public class ApplicationPEP implements PEP {
 	
+	private static final String APPLICATION_POLICY_ID = "application-policy";
+
 	private static final Logger logger = Logger
 			.getLogger(ApplicationPEP.class.getName());
 	
@@ -75,6 +81,10 @@ public class ApplicationPEP implements PEP {
 	 */
 	public void initializePDP(Collection<InputStream> policies) {
 		this.pdp = new MultiPolicyPDP(policies);
+		// check that "application-pdp" is present
+		if(!this.pdp.getSupportedPolicyIds().contains(APPLICATION_POLICY_ID)) {
+			throw new InvalidParameterException("The application policy was not found (should have id \"" + APPLICATION_POLICY_ID + "\")");
+		}
 	}
 	
 	/***********************
@@ -102,7 +112,7 @@ public class ApplicationPEP implements PEP {
 		// already in the cache
 		RequestType asRequest = asRequest(subject, object, action);
 		List<CachedAttribute> asCachedAttributes = asCachedAttributes(subject, object, action, environment);
-		ResponseCtx response = pdp.evaluate("application-policy", asRequest, asCachedAttributes);
+		ResponseCtx response = pdp.evaluate(APPLICATION_POLICY_ID, asRequest, asCachedAttributes);
 		
 		if(!getStatus(response).equals("ok")) {
 			logger.severe("An error occured in the policy evaluation for " + getIds(subject, object, action) + ". Status was: " + getStatus(response));
@@ -158,7 +168,7 @@ public class ApplicationPEP implements PEP {
 	/**
 	 * Helper function to create a XACML request from a Subject, Object and Action.
 	 */
-	public RequestType asRequest(Subject subject, Object object, Action action) {
+	protected RequestType asRequest(Subject subject, Object object, Action action) {
 		SubjectType xacmlSubject = new SubjectType();
 		AttributeType subjectId = new AttributeType();
 		subjectId.setAttributeId("subject:id");

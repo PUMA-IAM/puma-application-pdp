@@ -17,9 +17,14 @@
 			<artifactId>puma-pep-utils</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>puma</groupId>
+			<artifactId>puma-central-puma-pdp-rmi-utils</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 	<build>
-		<finalName>PUMA-IdP</finalName>
+		<finalName>PUMA-application-pdp</finalName>
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
