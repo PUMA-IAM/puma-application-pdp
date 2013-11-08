@@ -26,6 +26,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.xml.transform.OutputKeys;
@@ -58,13 +59,30 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 	private CentralPUMAPDPRemote centralPUMAPDP;
 
 	public CentralPUMAPolicyEvaluatorModule() {
-		try {
-			Registry registry = LocateRegistry.getRegistry("central-puma-pdp", 2020);
-			centralPUMAPDP = (CentralPUMAPDPRemote) registry.lookup("central-puma-pdp");
-		} catch(Exception e) {
-			System.err.println("FAILED to reach the central PUMA PDP");
-			e.printStackTrace();
+		setupCentralPUMAPDPConnection();
+	}
+	
+	/**
+	 * Idempotent helper function to set up the RMI connection to the central PUMA PDP.
+	 */
+	private void setupCentralPUMAPDPConnection() {
+		if(! isCentralPUMAPDPConnectionOK()) { //
+			try {
+				Registry registry = LocateRegistry.getRegistry("central-puma-pdp", 2020);
+				centralPUMAPDP = (CentralPUMAPDPRemote) registry.lookup("central-puma-pdp");
+			} catch(Exception e) {
+				logger.log(Level.WARNING, "FAILED to reach the central PUMA PDP", e);
+				centralPUMAPDP = null; // just to be sure
+			}
 		}
+	}
+	
+	/**
+	 * Helper function that returns whether the RMI connection to the central PUMA PDP is set up
+	 * or not.
+	 */
+	private boolean isCentralPUMAPDPConnectionOK() {
+		return centralPUMAPDP != null;
 	}
 
 	/**
@@ -138,6 +156,13 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 			return new Result(Result.DECISION_NOT_APPLICABLE);
 		}
 		
+		// try to set up the RMI connection every time (idempotent!)
+		setupCentralPUMAPDPConnection();
+		if(! isCentralPUMAPDPConnectionOK()) {
+			logger.log(Level.SEVERE, "The RMI connection to the remote PUMA PDP was not set up => default deny");
+			return new Result(Result.DECISION_DENY);
+		}
+		
 		// 1. build the request
 		RequestType request = context.getRequest();
 		// 2. build the cached attributes
@@ -148,16 +173,15 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 		try {
 			response = centralPUMAPDP.evaluate(request, cachedAttributes);
 		} catch (RemoteException e) {
-			System.err.println("RemoteException when contacting the remote PUMA PDP => default deny");
-			e.printStackTrace();
+			logger.log(Level.WARNING, "RemoteException when contacting the remote PUMA PDP => default deny", e);
 			return new Result(Result.DECISION_DENY);
 		}
 		// 4. process the response
 		if(response.getResults().size() == 0) {
-			System.err.println("The central PUMA PDP did not return a result?? => default deny");
+			logger.log(Level.WARNING, "The central PUMA PDP did not return a result?? => default deny");
 			return new Result(Result.DECISION_DENY);
 		} else if(response.getResults().size() > 1) {
-			System.err.println("The central PUMA PDP returned two results?? => default deny");
+			logger.log(Level.WARNING, "The central PUMA PDP returned two results?? => default deny");
 			return new Result(Result.DECISION_DENY);
 		} else {
 			for(Object result: response.getResults()) {

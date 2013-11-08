@@ -44,7 +44,7 @@ public class Example {
 		
 		puma.peputils.Object object = new puma.peputils.Object("123"); // damn, Object moet blijkbaar niet geïmporteerd worden...
 		object.addAttributeValue(new ObjectAttributeValue("type", "document"));
-		object.addAttributeValue(new ObjectAttributeValue("owning-tenant", "KUL"));
+		object.addAttributeValue(new ObjectAttributeValue("owning-tenant", "IMEC"));
 		object.addAttributeValue(new ObjectAttributeValue("location", "/docs/stuff/blabla/123.pdf"));
 		object.addAttributeValue(new ObjectAttributeValue("sender", "bert"));
 		ObjectAttributeValue destinations = new ObjectAttributeValue("destinations");
