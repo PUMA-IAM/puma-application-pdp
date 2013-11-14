@@ -1,13 +1,5 @@
 package puma.applicationpdp;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 import java.util.logging.Logger;
 
 import puma.peputils.Action;
@@ -27,7 +19,7 @@ public class Example {
 	 */
 	public static void main(String[] args) {
 		// 0. Initialize the PDP
-		ApplicationPEP.getInstance().initializePDP(getPolicyStreams());
+		ApplicationPEP.getInstance().initializePDP("/home/maartend/PhD/code/workspace-jee/puma-application-pdp/resources/policies/application-policy.xml");
 		
 		// 1. First build your subject, object, action and environment, for example
 		// based on the current Session or some parameters in the request
@@ -68,28 +60,6 @@ public class Example {
 		
 		System.out.println("You are authorized, here you can see the contents of document #123");
 
-	}
-
-	private static Collection<InputStream> getPolicyStreams() {
-		// Note: a servlet should use context.getResourcePaths("/policies")
-		File dir = new File("/home/maartend/PhD/code/workspace-jee/puma-application-pdp/resources/policies/");
-		List<File> files = Arrays.asList(dir.listFiles());
-		if(files.isEmpty()) {
-			throw new RuntimeException("No policies found, exiting.");
-		}
-		List<InputStream> policies = new ArrayList<InputStream>();
-		for(File file: files) {
-			if(file.isFile() && !file.getName().endsWith("~")) {
-				// can be a directory as well
-				try {
-					policies.add(new FileInputStream(file));
-				} catch (FileNotFoundException e) {
-					// should never happen
-					e.printStackTrace();
-				}
-			}
-		}
-		return policies;
 	}
 
 }
