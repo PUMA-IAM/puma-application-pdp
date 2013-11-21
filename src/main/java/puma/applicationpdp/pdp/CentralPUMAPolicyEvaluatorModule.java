@@ -51,8 +51,11 @@ import com.sun.xacml.remote.RemotePolicyEvaluatorModule;
 
 public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModule {
 
-	private static final String CENTRAL_PUMA_PDP_HOST = "central-puma-pdp";
+	private static final String CENTRAL_PUMA_PDP_HOST = "puma-central-puma-pdp";
+	
 	private static final String CENTRAL_PUMA_PDP_RMI_NAME = "central-puma-pdp";
+
+	private static final int CENTRAL_PUMA_PDP_RMI_REGISITRY_PORT = 2040;
 
 	/**
 	 * Our logger
@@ -71,7 +74,7 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 	private void setupCentralPUMAPDPConnection() {
 		if(! isCentralPUMAPDPConnectionOK()) { //
 			try {
-				Registry registry = LocateRegistry.getRegistry(CENTRAL_PUMA_PDP_HOST, 2020);
+				Registry registry = LocateRegistry.getRegistry(CENTRAL_PUMA_PDP_HOST, CENTRAL_PUMA_PDP_RMI_REGISITRY_PORT);
 				centralPUMAPDP = (CentralPUMAPDPRemote) registry.lookup(CENTRAL_PUMA_PDP_RMI_NAME);
 			} catch(Exception e) {
 				logger.log(Level.WARNING, "FAILED to reach the central PUMA PDP", e);
