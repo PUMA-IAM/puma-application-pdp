@@ -19,7 +19,7 @@ public class Example {
 	 */
 	public static void main(String[] args) {
 		// 0. Initialize the PDP
-		ApplicationPEP.getInstance().initializePDP("/home/maartend/PhD/code/workspace-jee/puma-application-pdp/resources/policies/application-policy.xml");
+		ApplicationPEP.getInstance().initializePDP("/home/jasper/git/puma-application-pdp/src/main/resources/policies/");
 		
 		// 1. First build your subject, object, action and environment, for example
 		// based on the current Session or some parameters in the request
