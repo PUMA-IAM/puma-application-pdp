@@ -226,7 +226,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 			Action action) {
 		SubjectType xacmlSubject = new SubjectType();
 		AttributeType subjectId = new AttributeType();
-		subjectId.setAttributeId("subject:id");
+		subjectId.setAttributeId("subject:id-which-should-never-be-needed");
 		subjectId.setDataType(StringAttribute.identifier);
 		AttributeValueType subjectIdValue = new AttributeValueType();
 		// subjectIdValue.getContent().add(subject.getId());
@@ -250,7 +250,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 
 		ActionType xacmlAction = new ActionType();
 		AttributeType actionId = new AttributeType();
-		actionId.setAttributeId("action:id");
+		actionId.setAttributeId("action:id-which-should-never-be-needed");
 		actionId.setDataType(StringAttribute.identifier);
 		AttributeValueType actionIdValue = new AttributeValueType();
 		// actionIdValue.getContent().add(action.getId());
