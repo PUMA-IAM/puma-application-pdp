@@ -25,25 +25,27 @@ public class Example {
 		// based on the current Session or some parameters in the request
 		Subject subject = new Subject("maarten");
 		SubjectAttributeValue roles = new SubjectAttributeValue("roles");
-		roles.addValue("phd");
+		roles.addValue("helpdesk");
 		roles.addValue("iminds-pr");
 		roles.addValue("boss-of-Jasper");
 		subject.addAttributeValue(roles);
 		subject.addAttributeValue(new SubjectAttributeValue("departement", "computer-science"));
 		subject.addAttributeValue(new SubjectAttributeValue("fired", false));
-		subject.addAttributeValue(new SubjectAttributeValue("tenant", "KUL"));
+		subject.addAttributeValue(new SubjectAttributeValue("tenant", "1"));
 		subject.addAttributeValue(new SubjectAttributeValue("email", "maarten.decat@cs.kuleuven.be"));
+		subject.addAttributeValue(new SubjectAttributeValue("ancienity", 7));
 		
 		puma.peputils.Object object = new puma.peputils.Object("123"); // damn, Object moet blijkbaar niet geïmporteerd worden...
 		object.addAttributeValue(new ObjectAttributeValue("type", "document"));
-		object.addAttributeValue(new ObjectAttributeValue("owning-tenant", "IMEC"));
+		object.addAttributeValue(new ObjectAttributeValue("creating-tenant", "2"));
+		object.addAttributeValue(new ObjectAttributeValue("owning-tenant", "TODO"));
 		object.addAttributeValue(new ObjectAttributeValue("location", "/docs/stuff/blabla/123.pdf"));
 		object.addAttributeValue(new ObjectAttributeValue("sender", "bert"));
 		ObjectAttributeValue destinations = new ObjectAttributeValue("destinations");
 		destinations.addValue("lantam@cs.kuleuven.be");
 		destinations.addValue("iemand@example.com");
 		
-		Action action = new Action("read");
+		Action action = new Action("delete");
 		
 		Environment environment = new Environment();
 		environment.addAttributeValue(new EnvironmentAttributeValue("system-status", "overload"));

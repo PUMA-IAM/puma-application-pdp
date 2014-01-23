@@ -90,6 +90,14 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 	private boolean isCentralPUMAPDPConnectionOK() {
 		return centralPUMAPDP != null;
 	}
+	
+	/**
+	 * Resets the central PUMA connection so that isCentralPUMAPDPConnectionOK()
+	 * returns false and the connection can be set up again using setupCentralPUMAPDPConnection(). 
+	 */
+	private void resetCentralPUMAPDPConnection() {
+		centralPUMAPDP = null;
+	}
 
 	/**
 	 * We do not support evaluation based on a request, we need an id.
@@ -179,6 +187,7 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 		try {
 			response = centralPUMAPDP.evaluate(request, cachedAttributes);
 		} catch (RemoteException e) {
+			resetCentralPUMAPDPConnection(); // FIXME a retry would be better
 			logger.log(Level.WARNING, "RemoteException when contacting the remote PUMA PDP => default deny", e);
 			return new Result(Result.DECISION_DENY);
 		}
