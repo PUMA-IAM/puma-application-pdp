@@ -31,7 +31,9 @@ import puma.peputils.Object;
 import puma.peputils.PEP;
 import puma.peputils.Subject;
 import puma.rmi.pdp.mgmt.ApplicationPDPMgmtRemote;
+import puma.util.timing.TimerFactory;
 
+import com.codahale.metrics.Timer;
 import com.sun.xacml.EvaluationCtx;
 import com.sun.xacml.attr.StringAttribute;
 import com.sun.xacml.ctx.CachedAttribute;
@@ -84,17 +86,24 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 
 	private ApplicationPDP pdp;
 
-	public ApplicationPEP() {
+	private String applicationPolicyFilename;
+
+	private String status;
+	
+	private Timer pepTimer = TimerFactory.getInstance().getTimer(getClass(), "pep.isAuthorized");
+	
+	private Timer pdpTimer = TimerFactory.getInstance().getTimer(getClass(), "applicationpdp.evaluate");
+
+	private ApplicationPEP() {
+		// initialize the timer
+		
+		
 		// NOTICE: the PDP should be initialized using initializePDP(dir)
 		// before the first call to isAuthorized()
 		this.pdp = null;
 
 		status = "NOT INITIALIZED";
 	}
-
-	private String applicationPolicyFilename;
-
-	private String status;
 
 	/**
 	 * Initialize the application PDP by scanning all policy files in the given
@@ -147,13 +156,31 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	 */
 	public boolean isAuthorized(Subject subject, Object object, Action action,
 			Environment environment) {
+		Timer.Context timerCtx = pepTimer.time();
+		boolean result = _isAuthorized(subject, object, action, environment);
+		timerCtx.stop();
+		return result;
+	}
+	/**
+	 * This is the real isAuthorized(). It is just separate to wrap it 
+	 * in timer code.
+	 * @param subject
+	 * @param object
+	 * @param action
+	 * @param environment
+	 * @return
+	 */
+	private boolean _isAuthorized(Subject subject, Object object, Action action,
+			Environment environment) {
 		// build a request containing the ids of the subject, object and action
 		// AND put ALL attributes
 		// already in the cache
 		RequestType asRequest = asRequest(subject, object, action);
 		List<CachedAttribute> asCachedAttributes = asCachedAttributes(subject,
 				object, action, environment);
+		Timer.Context timerCtx = pdpTimer.time();
 		ResponseCtx response = pdp.evaluate(asRequest, asCachedAttributes);
+		timerCtx.stop();
 
 		if (!getStatus(response).equals("ok")) {
 			logger.severe("An error occured in the policy evaluation for "

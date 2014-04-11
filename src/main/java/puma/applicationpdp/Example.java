@@ -8,6 +8,11 @@ import puma.peputils.Subject;
 import puma.peputils.attributes.EnvironmentAttributeValue;
 import puma.peputils.attributes.ObjectAttributeValue;
 import puma.peputils.attributes.SubjectAttributeValue;
+import puma.util.timing.TimerFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
 public class Example {
 	
@@ -57,10 +62,18 @@ public class Example {
 		// 3. Enforce the decision
 		if(!authorized) {
 			System.out.println("You shall not pass.");
-			return;
+		} else {
+			System.out.println("You are authorized, here you can see the contents of document #123");
 		}
 		
-		System.out.println("You are authorized, here you can see the contents of document #123");
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
+			String metrics = writer.writeValueAsString(TimerFactory.getInstance().getMetricRegistry());
+			System.out.println("metrics: " + metrics);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
 
 	}
 
