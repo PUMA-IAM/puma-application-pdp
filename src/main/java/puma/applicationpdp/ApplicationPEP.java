@@ -89,11 +89,10 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	private String applicationPolicyFilename;
 
 	private String status;
+		
+	private static final String PDP_TIMER_NAME = "applicationpdp.evaluate";
+	private static final String PEP_TIMER_NAME = "pep.isAuthorized";
 	
-	private Timer pepTimer = TimerFactory.getInstance().getTimer(getClass(), "pep.isAuthorized");
-	
-	private Timer pdpTimer = TimerFactory.getInstance().getTimer(getClass(), "applicationpdp.evaluate");
-
 	private ApplicationPEP() {
 		// initialize the timer
 		
@@ -156,7 +155,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	 */
 	public boolean isAuthorized(Subject subject, Object object, Action action,
 			Environment environment) {
-		Timer.Context timerCtx = pepTimer.time();
+		Timer.Context timerCtx = TimerFactory.getInstance().getTimer(getClass(), PEP_TIMER_NAME).time();
 		boolean result = _isAuthorized(subject, object, action, environment);
 		timerCtx.stop();
 		return result;
@@ -178,7 +177,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 		RequestType asRequest = asRequest(subject, object, action);
 		List<CachedAttribute> asCachedAttributes = asCachedAttributes(subject,
 				object, action, environment);
-		Timer.Context timerCtx = pdpTimer.time();
+		Timer.Context timerCtx = TimerFactory.getInstance().getTimer(getClass(), PDP_TIMER_NAME).time();
 		ResponseCtx response = pdp.evaluate(asRequest, asCachedAttributes);
 		timerCtx.stop();
 
