@@ -32,6 +32,8 @@ import mdc.xacml.impl.DefaultAttributeCounter;
 import mdc.xacml.impl.HardcodedEnvironmentAttributeModule;
 import mdc.xacml.impl.SimplePolicyFinderModule;
 import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
+import puma.piputils.EntityDatabase;
+import puma.piputils.QueryAttributeFinderModule;
 
 import com.sun.xacml.AbstractPolicy;
 import com.sun.xacml.BasicEvaluationCtx;
@@ -68,7 +70,7 @@ public class ApplicationPDP {
 	 * Initialize this MultiPolicyPDP with given collection of input streams
 	 * pointing to XACML policies (XML files).
 	 */
-	public ApplicationPDP(InputStream applicationPolicyStream) {
+	public ApplicationPDP(InputStream applicationPolicyStream, Boolean allowRemoteAccess) {
 		// Now setup the attribute finder
 		// 1. current date/time
 		HardcodedEnvironmentAttributeModule envAttributeModule = new HardcodedEnvironmentAttributeModule();
@@ -81,6 +83,9 @@ public class ApplicationPDP {
 		AttributeFinder attributeFinder = new AttributeFinder();
 		List<AttributeFinderModule> attributeModules = new ArrayList<AttributeFinderModule>();
 		attributeModules.add(envAttributeModule);
+		if (allowRemoteAccess) {
+			attributeModules.add(new QueryAttributeFinderModule());
+		}
 		// attributeModules.add(selectorAttributeModule);
 		// attributeModules.add(localAttributeFinderModule);
 		attributeFinder.setModules(attributeModules);
@@ -117,6 +122,7 @@ public class ApplicationPDP {
 		policyFinder.setModules(policyModules);
 		this.pdp = new PDP(new PDPConfig(attributeFinder, policyFinder, null,
 				remotePolicyEvaluator, new DefaultAttributeCounter()));
+		EntityDatabase.getInstance().open(true);
 	}
 
 	/**
@@ -140,6 +146,12 @@ public class ApplicationPDP {
 	 */
 	public ResponseCtx evaluate(RequestType request,
 			List<CachedAttribute> cachedAttributes) {
+		String log = "Received policy request for Application-level PDP. Cached attributes:\n";
+		for(CachedAttribute a: cachedAttributes) {
+			log += a.getId() + " = " + a.getValue().toString() + "\n";
+		}
+		logger.info(log);
+		
 		// if supported, evaluate the appropriate policy
 		BasicEvaluationCtx ctx;
 		try {

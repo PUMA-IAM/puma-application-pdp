@@ -35,13 +35,13 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
 import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
-
 import org.w3c.dom.Node;
 
 import puma.rmi.pdp.CentralPUMAPDPRemote;
+import puma.util.timing.TimerFactory;
 
+import com.codahale.metrics.Timer;
 import com.sun.xacml.EvaluationCtx;
 import com.sun.xacml.PDP;
 import com.sun.xacml.ctx.CachedAttribute;
@@ -185,7 +185,9 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 		// 3. ask for a response
 		ResponseCtx response;
 		try {
+			Timer.Context timerCtx = TimerFactory.getInstance().getTimer(getClass(), "remotepdp.total").time();
 			response = centralPUMAPDP.evaluate(request, cachedAttributes);
+			timerCtx.stop();
 		} catch (RemoteException e) {
 			resetCentralPUMAPDPConnection(); // FIXME a retry would be better
 			logger.log(Level.WARNING, "RemoteException when contacting the remote PUMA PDP => default deny", e);
@@ -213,6 +215,7 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 	 * @param node
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private static String nodeToString(Node node) {
 		StringWriter sw = new StringWriter();
 		try {

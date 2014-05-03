@@ -89,8 +89,9 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	private String applicationPolicyFilename;
 
 	private String status;
+	
+	private Boolean remoteAccessIsEnabled;
 		
-	private static final String PDP_TIMER_NAME = "applicationpdp.evaluate";
 	private static final String PEP_TIMER_NAME = "pep.isAuthorized";
 	
 	private ApplicationPEP() {
@@ -100,7 +101,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 		// NOTICE: the PDP should be initialized using initializePDP(dir)
 		// before the first call to isAuthorized()
 		this.pdp = null;
-
+		this.remoteAccessIsEnabled = false;
 		status = "NOT INITIALIZED";
 	}
 
@@ -127,7 +128,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 			status = "APPLICATION POLICY FILE NOT FOUND";
 			return;
 		}
-		this.pdp = new ApplicationPDP(applicationPolicyStream);
+		this.pdp = new ApplicationPDP(applicationPolicyStream, this.remoteAccessIsEnabled);
 		logger.info("initialized application PDP");
 		status = "OK";
 	}
@@ -177,10 +178,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 		RequestType asRequest = asRequest(subject, object, action);
 		List<CachedAttribute> asCachedAttributes = asCachedAttributes(subject,
 				object, action, environment);
-		Timer.Context timerCtx = TimerFactory.getInstance().getTimer(getClass(), PDP_TIMER_NAME).time();
 		ResponseCtx response = pdp.evaluate(asRequest, asCachedAttributes);
-		timerCtx.stop();
-
 		if (!getStatus(response).equals("ok")) {
 			logger.severe("An error occured in the policy evaluation for "
 					+ getIds(subject, object, action) + ". Status was: "
@@ -305,6 +303,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	 * @param response
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	private static String getStatus(ResponseCtx response) {
 		Set<Result> results = response.getResults();
 		Result result = null;
@@ -327,6 +326,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	 * @param response
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	private static int getDecision(ResponseCtx response) {
 		Set<Result> results = response.getResults();
 		Result result = null;
@@ -368,6 +368,14 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 		logger.info("Succesfully reloaded application policy");
 		this.reload();
 	}
+	
+	@Override
+	public void setRemoteDBAccess(Boolean enabled) {
+		logger.log(Level.INFO, "Setting remote access to DB from this PDP to " + enabled);
+		this.remoteAccessIsEnabled = enabled;
+		logger.info("Reloading PDP...");
+		this.reload();
+	}
 
 	@Override
 	public void reload() {
@@ -383,8 +391,8 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 			status = "APPLICATION POLICY FILE NOT FOUND";
 			return;
 		}
-		this.pdp = new ApplicationPDP(applicationPolicyStream);
-		logger.info("Reloaded application PDP");
+		this.pdp = new ApplicationPDP(applicationPolicyStream, this.remoteAccessIsEnabled);
+		logger.info("Reloaded application PDP [remote access = " + this.remoteAccessIsEnabled.toString() + "]");
 		status = "OK";
 	}
 
