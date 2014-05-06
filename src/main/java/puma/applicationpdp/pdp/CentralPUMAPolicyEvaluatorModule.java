@@ -186,7 +186,7 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 		ResponseCtx response;
 		try {
 			Timer.Context timerCtx = TimerFactory.getInstance().getTimer(getClass(), "remotepdp.total").time();
-			response = centralPUMAPDP.evaluate(request, cachedAttributes);
+			response = centralPUMAPDP.evaluate(null, cachedAttributes);	// LATER Omit null pointer altogether, not required and incurs a serious performance penalty
 			timerCtx.stop();
 		} catch (RemoteException e) {
 			resetCentralPUMAPDPConnection(); // FIXME a retry would be better

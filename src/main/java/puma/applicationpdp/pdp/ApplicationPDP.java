@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import mdc.xacml.impl.DefaultAttributeCounter;
@@ -144,13 +145,16 @@ public class ApplicationPDP {
 	/**
 	 * Evaluate a request and return the result.
 	 */
-	public ResponseCtx evaluate(RequestType request,
-			List<CachedAttribute> cachedAttributes) {
-		String log = "Received policy request for Application-level PDP. Cached attributes:\n";
-		for(CachedAttribute a: cachedAttributes) {
-			log += a.getId() + " = " + a.getValue().toString() + "\n";
+	public ResponseCtx evaluate(RequestType request, List<CachedAttribute> cachedAttributes) {
+		// Only setup log item if supported,
+		//		else noop
+		if (logAll()) {
+			String log = "Received policy request for Application-level PDP. Cached attributes:\n";
+			for(CachedAttribute a: cachedAttributes) {
+				log += a.getId() + " = " + a.getValue().toString() + "\n";
+			}
+			logger.info(log);
 		}
-		logger.info(log);
 		
 		// if supported, evaluate the appropriate policy
 		BasicEvaluationCtx ctx;
@@ -166,5 +170,13 @@ public class ApplicationPDP {
 		// evaluate
 		ResponseCtx response = this.pdp.evaluate(ctx);
 		return response;
+	}
+	
+	private static Boolean logAll() {
+		if (LogManager.getLogManager().getLogger("") == null)
+			return false;
+		if (LogManager.getLogManager().getLogger("").getLevel() == null)
+			return false;
+		return !LogManager.getLogManager().getLogger("").getLevel().equals(Level.WARNING);
 	}
 }
