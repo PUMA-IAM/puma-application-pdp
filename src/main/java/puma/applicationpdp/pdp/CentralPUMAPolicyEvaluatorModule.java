@@ -35,7 +35,9 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
 import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
+
 import org.w3c.dom.Node;
 
 import puma.rmi.pdp.CentralPUMAPDPRemote;
@@ -44,7 +46,7 @@ import puma.util.timing.TimerFactory;
 import com.codahale.metrics.Timer;
 import com.sun.xacml.EvaluationCtx;
 import com.sun.xacml.PDP;
-import com.sun.xacml.ctx.CachedAttribute;
+import com.sun.xacml.ctx.EncodedCachedAttribute;
 import com.sun.xacml.ctx.ResponseCtx;
 import com.sun.xacml.ctx.Result;
 import com.sun.xacml.remote.RemotePolicyEvaluatorModule;
@@ -180,13 +182,13 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 		// 1. build the request
 		RequestType request = context.getRequest();
 		// 2. build the cached attributes
-		List<CachedAttribute> cachedAttributes = new LinkedList<CachedAttribute>();
-		cachedAttributes.addAll(context.getRawCachedAttributes());
+		List<EncodedCachedAttribute> cachedAttributes = new LinkedList<EncodedCachedAttribute>();
+		cachedAttributes.addAll(context.getEncodedCachedAttributes());
 		// 3. ask for a response
 		ResponseCtx response;
 		try {
 			Timer.Context timerCtx = TimerFactory.getInstance().getTimer(getClass(), "remotepdp.total").time();
-			response = centralPUMAPDP.evaluate(null, cachedAttributes);	// LATER Omit null pointer altogether, not required and incurs a serious performance penalty
+			response = centralPUMAPDP.evaluate(cachedAttributes);
 			timerCtx.stop();
 		} catch (RemoteException e) {
 			resetCentralPUMAPDPConnection(); // FIXME a retry would be better
