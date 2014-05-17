@@ -85,6 +85,7 @@ public class ApplicationPDP {
 		List<AttributeFinderModule> attributeModules = new ArrayList<AttributeFinderModule>();
 		attributeModules.add(envAttributeModule);
 		if (allowRemoteAccess) {
+			logger.info("Adding query attribute finder...");
 			attributeModules.add(new QueryAttributeFinderModule());
 		}
 		// attributeModules.add(selectorAttributeModule);

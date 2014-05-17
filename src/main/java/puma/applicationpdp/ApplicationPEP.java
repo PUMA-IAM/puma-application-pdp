@@ -199,7 +199,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 						+ " was Indeterminate");
 				return false;
 			case Result.DECISION_NOT_APPLICABLE:
-				logger.warning("Authorization decision for "
+				logger.info("Authorization decision for "
 						+ getIds(subject, object, action)
 						+ " was Not Applicable");
 				return false;
