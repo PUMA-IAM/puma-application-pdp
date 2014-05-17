@@ -71,7 +71,8 @@ public class ApplicationPDP {
 	 * Initialize this MultiPolicyPDP with given collection of input streams
 	 * pointing to XACML policies (XML files).
 	 */
-	public ApplicationPDP(InputStream applicationPolicyStream, Boolean allowRemoteAccess) {
+	public ApplicationPDP(InputStream applicationPolicyStream,
+			Boolean allowRemoteAccess) {
 		// Now setup the attribute finder
 		// 1. current date/time
 		HardcodedEnvironmentAttributeModule envAttributeModule = new HardcodedEnvironmentAttributeModule();
@@ -95,8 +96,10 @@ public class ApplicationPDP {
 		// Also set up the remote policy evaluator
 		RemotePolicyEvaluator remotePolicyEvaluator = new RemotePolicyEvaluator();
 		Set<RemotePolicyEvaluatorModule> remotePolicyEvaluatorModules = new HashSet<RemotePolicyEvaluatorModule>();
+//		remotePolicyEvaluatorModules
+//				.add(new CentralPUMAPolicyEvaluatorModule());
 		remotePolicyEvaluatorModules
-				.add(new CentralPUMAPolicyEvaluatorModule());
+				.add(new CentralPUMAThriftPolicyEvaluatorModule());
 		remotePolicyEvaluator.setModules(remotePolicyEvaluatorModules);
 
 		// build the PDP
@@ -146,22 +149,25 @@ public class ApplicationPDP {
 	/**
 	 * Evaluate a request and return the result.
 	 */
-	public ResponseCtx evaluate(RequestType request, List<CachedAttribute> cachedAttributes) {
+	public ResponseCtx evaluate(RequestType request,
+			List<CachedAttribute> cachedAttributes) {
 		// Only setup log item if supported,
-		//		else noop
+		// else noop
 		if (logAll()) {
 			String log = "Received policy request for Application-level PDP. Cached attributes:\n";
-			for(CachedAttribute a: cachedAttributes) {
+			for (CachedAttribute a : cachedAttributes) {
 				log += a.getId() + " = " + a.getValue().toString() + "\n";
 			}
 			logger.info(log);
 		}
-		
+
 		// if supported, evaluate the appropriate policy
 		BasicEvaluationCtx ctx;
 		try {
-			ctx = new BasicEvaluationCtx(request, this.pdp.getAttributeFinder(),
-					this.pdp.getRemotePolicyEvaluator(), new DefaultAttributeCounter());
+			ctx = new BasicEvaluationCtx(request,
+					this.pdp.getAttributeFinder(),
+					this.pdp.getRemotePolicyEvaluator(),
+					new DefaultAttributeCounter());
 		} catch (ParsingException e) {
 			logger.log(Level.SEVERE, "Parsing exception here??", e);
 			return null;
@@ -172,12 +178,13 @@ public class ApplicationPDP {
 		ResponseCtx response = this.pdp.evaluate(ctx);
 		return response;
 	}
-	
+
 	private static Boolean logAll() {
 		if (LogManager.getLogManager().getLogger("") == null)
 			return false;
 		if (LogManager.getLogManager().getLogger("").getLevel() == null)
 			return false;
-		return !LogManager.getLogManager().getLogger("").getLevel().equals(Level.WARNING);
+		return !LogManager.getLogManager().getLogger("").getLevel()
+				.equals(Level.WARNING);
 	}
 }
