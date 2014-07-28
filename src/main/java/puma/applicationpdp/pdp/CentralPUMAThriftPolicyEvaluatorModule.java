@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
-
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -46,6 +44,7 @@ import com.sun.xacml.EvaluationCtx;
 import com.sun.xacml.PDP;
 import com.sun.xacml.attr.BooleanAttribute;
 import com.sun.xacml.attr.DateTimeAttribute;
+import com.sun.xacml.attr.DoubleAttribute;
 import com.sun.xacml.attr.IntegerAttribute;
 import com.sun.xacml.attr.StringAttribute;
 import com.sun.xacml.ctx.CachedAttribute;
@@ -195,7 +194,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 		}
 
 		// 1. build the request
-		RequestType request = context.getRequest();
+		// NOTE not used: RequestType request = context.getRequest();
 		// 2. build the cached attributes
 		List<AttributeValueP> cachedAttributes = convertCachedAttributes(context
 				.getRawCachedAttributes());
@@ -237,6 +236,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private List<AttributeValueP> convertCachedAttributes(
 			Collection<CachedAttribute> cachedAttributes) {
 		// preprocess the input
@@ -280,6 +280,11 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 					avp.addToDatetimeValues(av.getValue().getTime());
 				}
 				values.add(avp);
+			} else if (type.equals(DoubleAttribute.identifier)) {
+				AttributeValueP avp = new AttributeValueP(DataTypeP.DOUBLE, ca.getId());
+				for (DoubleAttribute av : (Collection<DoubleAttribute>) ca.getValue().getValue()) {
+					avp.addToDoubleValues(av.getValue());
+				}
 			} else {
 				throw new RuntimeException("Unsupport attribute type given: "
 						+ type);

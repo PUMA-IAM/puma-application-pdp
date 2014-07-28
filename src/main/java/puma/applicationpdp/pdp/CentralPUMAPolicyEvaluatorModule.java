@@ -36,8 +36,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
-
 import org.w3c.dom.Node;
 
 import puma.rmi.pdp.CentralPUMAPDPRemote;
@@ -180,7 +178,7 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 		}
 		
 		// 1. build the request
-		RequestType request = context.getRequest();
+		// NOTE not used: RequestType request = context.getRequest();
 		// 2. build the cached attributes
 		List<EncodedCachedAttribute> cachedAttributes = new LinkedList<EncodedCachedAttribute>();
 		cachedAttributes.addAll(context.getEncodedCachedAttributes());
@@ -191,7 +189,7 @@ public class CentralPUMAPolicyEvaluatorModule extends RemotePolicyEvaluatorModul
 			response = centralPUMAPDP.evaluate(cachedAttributes);
 			timerCtx.stop();
 		} catch (RemoteException e) {
-			resetCentralPUMAPDPConnection(); // FIXME a retry would be better
+			resetCentralPUMAPDPConnection(); // LATER a retry would be better
 			logger.log(Level.WARNING, "RemoteException when contacting the remote PUMA PDP => default deny", e);
 			return new Result(Result.DECISION_DENY);
 		}
