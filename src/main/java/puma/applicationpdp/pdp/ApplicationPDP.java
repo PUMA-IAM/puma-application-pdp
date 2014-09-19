@@ -32,17 +32,32 @@ import java.util.logging.Logger;
 import mdc.xacml.impl.DefaultAttributeCounter;
 import mdc.xacml.impl.HardcodedEnvironmentAttributeModule;
 import mdc.xacml.impl.SimplePolicyFinderModule;
+import oasis.names.tc.xacml._2_0.context.schema.os.ActionType;
+import oasis.names.tc.xacml._2_0.context.schema.os.AttributeType;
+import oasis.names.tc.xacml._2_0.context.schema.os.AttributeValueType;
+import oasis.names.tc.xacml._2_0.context.schema.os.EnvironmentType;
 import oasis.names.tc.xacml._2_0.context.schema.os.RequestType;
+import oasis.names.tc.xacml._2_0.context.schema.os.ResourceType;
+import oasis.names.tc.xacml._2_0.context.schema.os.SubjectType;
+import puma.peputils.Action;
+import puma.peputils.Environment;
+import puma.peputils.Object;
+import puma.peputils.PDP;
+import puma.peputils.PDPDecision;
+import puma.peputils.PDPResult;
+import puma.peputils.Subject;
 import puma.piputils.EntityDatabase;
 import puma.piputils.QueryAttributeFinderModule;
 
 import com.sun.xacml.AbstractPolicy;
 import com.sun.xacml.BasicEvaluationCtx;
-import com.sun.xacml.PDP;
+import com.sun.xacml.EvaluationCtx;
 import com.sun.xacml.PDPConfig;
 import com.sun.xacml.ParsingException;
+import com.sun.xacml.attr.StringAttribute;
 import com.sun.xacml.ctx.CachedAttribute;
 import com.sun.xacml.ctx.ResponseCtx;
+import com.sun.xacml.ctx.Result;
 import com.sun.xacml.finder.AttributeFinder;
 import com.sun.xacml.finder.AttributeFinderModule;
 import com.sun.xacml.finder.PolicyFinder;
@@ -58,14 +73,14 @@ import com.sun.xacml.support.finder.PolicyReader;
  * @author Maarten Decat
  * 
  */
-public class ApplicationPDP {
+public class ApplicationPDP implements PDP {
 
 	public static final String APPLICATION_POLICY_ID = "application-policy";
 
 	private static final Logger logger = Logger.getLogger(ApplicationPDP.class
 			.getName());
 
-	private PDP pdp;
+	private com.sun.xacml.PDP pdp;
 
 	/**
 	 * Initialize this MultiPolicyPDP with given collection of input streams
@@ -125,7 +140,7 @@ public class ApplicationPDP {
 		Set<PolicyFinderModule> policyModules = new HashSet<PolicyFinderModule>();
 		policyModules.add(simplePolicyFinderModule);
 		policyFinder.setModules(policyModules);
-		this.pdp = new PDP(new PDPConfig(attributeFinder, policyFinder, null,
+		this.pdp = new com.sun.xacml.PDP(new PDPConfig(attributeFinder, policyFinder, null,
 				remotePolicyEvaluator, new DefaultAttributeCounter()));
 		EntityDatabase.getInstance().open(true);
 	}
@@ -139,17 +154,17 @@ public class ApplicationPDP {
 		return result;
 	}
 
-	/**
+	/*
 	 * Evaluate a request and return the result.
-	 */
-	public ResponseCtx evaluate(RequestType request) {
+	 *
+	private ResponseCtx evaluate(RequestType request) {
 		return evaluate(request, new LinkedList<CachedAttribute>());
-	}
+	}*/
 
 	/**
 	 * Evaluate a request and return the result.
 	 */
-	public ResponseCtx evaluate(RequestType request,
+	private ResponseCtx evaluate(RequestType request,
 			List<CachedAttribute> cachedAttributes) {
 		// Only setup log item if supported,
 		// else noop
@@ -186,5 +201,151 @@ public class ApplicationPDP {
 			return false;
 		return !LogManager.getLogManager().getLogger("").getLevel()
 				.equals(Level.WARNING);
+	}
+	
+	public PDPResult evaluate(Subject subject, Object object, Action action, Environment environment) {
+		RequestType asRequest = asRequest(subject, object, action);
+		List<CachedAttribute> asCachedAttributes = asCachedAttributes(subject, object, action, environment);
+		
+		ResponseCtx response = evaluate(asRequest, asCachedAttributes);
+		int decisionInt = getDecision(response);
+		
+		PDPDecision decision;
+		switch (decisionInt) {
+		case Result.DECISION_PERMIT:
+			decision = PDPDecision.PERMIT;
+			break;
+		case Result.DECISION_INDETERMINATE:
+			decision = PDPDecision.INDETERMINATE;
+			break;
+		case Result.DECISION_NOT_APPLICABLE:
+			decision = PDPDecision.NOT_APPLICABLE;
+			break;
+		case Result.DECISION_DENY:
+			decision = PDPDecision.DENY;
+			break;
+		default:
+			decision = PDPDecision.UNKNOWN;
+			break;
+		}
+		
+		return new PDPResult(decision, getStatus(response));
+	}
+	
+	
+	
+	/**************************************************************
+	 ******************* HELPER FUNCTIONS *************************
+	 **************************************************************/
+	
+	
+	
+	/**
+	 * Helper function to retrieve the attributes of the given subject, object,
+	 * action and environment as cached attributes.
+	 */
+	private List<CachedAttribute> asCachedAttributes(Subject subject,
+			Object object, Action action, Environment environment) {
+		List<CachedAttribute> result = new LinkedList<CachedAttribute>();
+		result.addAll(subject.asCachedAttributes());
+		result.addAll(object.asCachedAttributes());
+		result.addAll(action.asCachedAttributes());
+		result.addAll(environment.asCachedAttributes());
+		return result;
+	}
+
+	/**
+	 * Helper function to create a XACML request from a Subject, Object and
+	 * Action.
+	 */
+	protected RequestType asRequest(Subject subject, Object object,
+			Action action) {
+		SubjectType xacmlSubject = new SubjectType();
+		AttributeType subjectId = new AttributeType();
+		subjectId.setAttributeId("subject:id-which-should-never-be-needed");
+		subjectId.setDataType(StringAttribute.identifier);
+		AttributeValueType subjectIdValue = new AttributeValueType();
+		// subjectIdValue.getContent().add(subject.getId());
+		subjectIdValue.getContent().add(
+				"THE-SUBJECT-ID-IN-THE-REQUEST-WHICH-SHOULD-NEVER-BE-NEEDED");
+		subjectId.getAttributeValue().add(subjectIdValue);
+		xacmlSubject.getAttribute().add(subjectId);
+
+		ResourceType xacmlObject = new ResourceType();
+		AttributeType objectId = new AttributeType();
+		objectId.setAttributeId(EvaluationCtx.RESOURCE_ID); // this should be
+															// the official id
+															// apparently
+		objectId.setDataType(StringAttribute.identifier);
+		AttributeValueType objectIdValue = new AttributeValueType();
+		// objectIdValue.getContent().add(object.getId());
+		objectIdValue.getContent().add(
+				"THE-OBJECT-ID-IN-THE-REQUEST-WHICH-SHOULD-NEVER-BE-NEEDED");
+		objectId.getAttributeValue().add(objectIdValue);
+		xacmlObject.getAttribute().add(objectId);
+
+		ActionType xacmlAction = new ActionType();
+		AttributeType actionId = new AttributeType();
+		actionId.setAttributeId("action:id-which-should-never-be-needed");
+		actionId.setDataType(StringAttribute.identifier);
+		AttributeValueType actionIdValue = new AttributeValueType();
+		// actionIdValue.getContent().add(action.getId());
+		actionIdValue.getContent().add(
+				"THE-ACTION-ID-IN-THE-REQUEST-WHICH-SHOULD-NEVER-BE-NEEDED");
+		actionId.getAttributeValue().add(actionIdValue);
+		xacmlAction.getAttribute().add(actionId);
+
+		EnvironmentType xacmlEnvironment = new EnvironmentType(); // empty in
+																	// the
+																	// request
+
+		RequestType xacmlRequest = new RequestType();
+		xacmlRequest.getSubject().add(xacmlSubject);
+		xacmlRequest.getResource().add(xacmlObject);
+		xacmlRequest.setAction(xacmlAction);
+		xacmlRequest.setEnvironment(xacmlEnvironment);
+
+		return xacmlRequest;
+	}
+
+	/**
+	 * Helper function to get the status from a response context. Returns "ok"
+	 * if everything was ok.
+	 * 
+	 * @param response
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	private static String getStatus(ResponseCtx response) {
+		Set<Result> results = response.getResults();
+		Result result = null;
+		for (Result r : results) {
+			// the first one if there only is one
+			result = r;
+		}
+		List<String> stati = result.getStatus().getCode();
+		for (String status : stati) {
+			String[] parts = status.split(":");
+			return parts[parts.length - 1];
+		}
+		return null;
+	}
+
+	/**
+	 * Helper function to get the decision from a response context. See
+	 * Result.DECISION_X for the list of possible results.
+	 * 
+	 * @param response
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	private static int getDecision(ResponseCtx response) {
+		Set<Result> results = response.getResults();
+		Result result = null;
+		for (Result r : results) {
+			// the first one if there only is one
+			result = r;
+		}
+		return result.getDecision();
 	}
 }
