@@ -25,6 +25,7 @@ import puma.peputils.Action;
 import puma.peputils.Environment;
 import puma.peputils.Subject;
 import puma.peputils.attributes.EnvironmentAttributeValue;
+import puma.peputils.attributes.Multiplicity;
 import puma.peputils.attributes.ObjectAttributeValue;
 import puma.peputils.attributes.SubjectAttributeValue;
 import puma.util.timing.TimerFactory;
@@ -48,32 +49,32 @@ public class Example {
 		// 1. First build your subject, object, action and environment, for example
 		// based on the current Session or some parameters in the request
 		Subject subject = new Subject("maarten");
-		SubjectAttributeValue roles = new SubjectAttributeValue("roles");
+		SubjectAttributeValue roles = new SubjectAttributeValue("roles", Multiplicity.GROUPED);
 		roles.addValue("helpdesk");
 		roles.addValue("iminds-pr");
 		roles.addValue("boss-of-Jasper");
 		subject.addAttributeValue(roles);
-		subject.addAttributeValue(new SubjectAttributeValue("departement", "computer-science"));
-		subject.addAttributeValue(new SubjectAttributeValue("fired", false));
-		subject.addAttributeValue(new SubjectAttributeValue("tenant", "1"));
-		subject.addAttributeValue(new SubjectAttributeValue("email", "maarten.decat@cs.kuleuven.be"));
-		subject.addAttributeValue(new SubjectAttributeValue("ancienity", 7));
+		subject.addAttributeValue(new SubjectAttributeValue("departement", Multiplicity.ATOMIC, "computer-science"));
+		subject.addAttributeValue(new SubjectAttributeValue("fired", Multiplicity.ATOMIC, false));
+		subject.addAttributeValue(new SubjectAttributeValue("tenant", Multiplicity.GROUPED, "1"));
+		subject.addAttributeValue(new SubjectAttributeValue("email", Multiplicity.ATOMIC, "maarten.decat@cs.kuleuven.be"));
+		subject.addAttributeValue(new SubjectAttributeValue("ancienity", Multiplicity.ATOMIC, 7));
 		
 		puma.peputils.Object object = new puma.peputils.Object("123"); // damn, Object moet blijkbaar niet geïmporteerd worden...
-		object.addAttributeValue(new ObjectAttributeValue("type", "document"));
-		object.addAttributeValue(new ObjectAttributeValue("creating-tenant", "2"));
-		object.addAttributeValue(new ObjectAttributeValue("owning-tenant", "TODO"));
-		object.addAttributeValue(new ObjectAttributeValue("location", "/docs/stuff/blabla/123.pdf"));
-		object.addAttributeValue(new ObjectAttributeValue("sender", "bert"));
-		ObjectAttributeValue destinations = new ObjectAttributeValue("destinations");
+		object.addAttributeValue(new ObjectAttributeValue("type", Multiplicity.ATOMIC, "document"));
+		object.addAttributeValue(new ObjectAttributeValue("creating-tenant", Multiplicity.ATOMIC, "2"));
+		object.addAttributeValue(new ObjectAttributeValue("owning-tenant", Multiplicity.ATOMIC, "TODO"));
+		object.addAttributeValue(new ObjectAttributeValue("location", Multiplicity.ATOMIC, "/docs/stuff/blabla/123.pdf"));
+		object.addAttributeValue(new ObjectAttributeValue("sender", Multiplicity.ATOMIC, "bert"));
+		ObjectAttributeValue destinations = new ObjectAttributeValue("destinations", Multiplicity.GROUPED);
 		destinations.addValue("lantam@cs.kuleuven.be");
 		destinations.addValue("iemand@example.com");
 		
 		Action action = new Action("delete");
 		
 		Environment environment = new Environment();
-		environment.addAttributeValue(new EnvironmentAttributeValue("system-status", "overload"));
-		environment.addAttributeValue(new EnvironmentAttributeValue("system-load", 90));
+		environment.addAttributeValue(new EnvironmentAttributeValue("system-status", Multiplicity.ATOMIC, "overload"));
+		environment.addAttributeValue(new EnvironmentAttributeValue("system-load", Multiplicity.ATOMIC, 90));
 		
 		// 2. Then just ask the PEP for a decision
 		boolean authorized = ApplicationPEP.getInstance().isAuthorized(subject, object, action, environment);
