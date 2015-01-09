@@ -151,8 +151,8 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 			status = "APPLICATION POLICY FILE NOT FOUND";
 			return;
 		}
-		//this.pdp = new ApplicationPDP(applicationPolicyStream, this.remoteAccessIsEnabled);
-		this.pdp = new StaplPDP();
+		this.pdp = new ApplicationPDP(applicationPolicyStream, this.remoteAccessIsEnabled);
+		//this.pdp = new StaplPDP();
 		logger.info("initialized application PDP");
 		status = "OK";
 	}
@@ -303,8 +303,8 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 			status = "APPLICATION POLICY FILE NOT FOUND";
 			return;
 		}
-		//this.pdp = new ApplicationPDP(applicationPolicyStream, this.remoteAccessIsEnabled);
-		this.pdp = new StaplPDP();
+		this.pdp = new ApplicationPDP(applicationPolicyStream, this.remoteAccessIsEnabled);
+		//this.pdp = new StaplPDP();
 		logger.info("Reloaded application PDP [remote access = " + this.remoteAccessIsEnabled.toString() + "]");
 		status = "OK";
 	}
@@ -321,7 +321,7 @@ public class ApplicationPEP implements PEP, ApplicationPDPMgmtRemote {
 	}
 
 	@Override
-	public String getId() throws RemoteException {
+	public String getId() {
 		return "" + this.hashCode();
 	}
 }
