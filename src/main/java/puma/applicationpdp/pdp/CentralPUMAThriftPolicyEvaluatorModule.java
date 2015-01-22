@@ -297,17 +297,17 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 	}
 	
 	private ObjectTypeP inferObjectType(CachedAttribute attr) {
-		if(attr.getType().contains("subject:"))
+		if(attr.getId().contains("subject:"))
 			return ObjectTypeP.SUBJECT;
-		else if(attr.getType().contains("object:"))
+		else if(attr.getId().contains("object:"))
 			return ObjectTypeP.RESOURCE;
-		else if(attr.getType().contains("resource:"))
+		else if(attr.getId().contains("resource:"))
 			return ObjectTypeP.RESOURCE;
-		else if(attr.getType().contains("action:"))
+		else if(attr.getId().contains("action:"))
 			return ObjectTypeP.ACTION;
-		else if(attr.getType().contains("environment:"))
+		else if(attr.getId().contains("environment:"))
 			return ObjectTypeP.ENVIRONMENT;
-		else if(attr.getType().contains("env:"))
+		else if(attr.getId().contains("env:"))
 			return ObjectTypeP.ENVIRONMENT;
 		else
 			throw new RuntimeException("Cannot infer whether subject/action/object/environment for cached attribute \"" + attr +"\"");
