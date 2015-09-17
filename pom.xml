@@ -42,6 +42,16 @@
 			<artifactId>puma-stapl-pdp</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>puma</groupId>
+			<artifactId>puma-rest-utils</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>puma</groupId>
+			<artifactId>puma-pip-utils</artifactId>
+			<version>1.0</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<finalName>PUMA-application-pdp</finalName>

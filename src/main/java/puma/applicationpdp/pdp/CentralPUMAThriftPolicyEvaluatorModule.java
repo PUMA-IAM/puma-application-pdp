@@ -26,19 +26,12 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
-
-import puma.thrift.pdp.AttributeValueP;
-import puma.thrift.pdp.DataTypeP;
-import puma.thrift.pdp.MultiplicityP;
-import puma.thrift.pdp.ObjectTypeP;
-import puma.thrift.pdp.RemotePDPService;
-import puma.thrift.pdp.ResponseTypeP;
+import puma.rest.client.CentralPDPClient;
+import puma.rest.domain.AttributeValue;
+import puma.rest.domain.DataType;
+import puma.rest.domain.Multiplicity;
+import puma.rest.domain.ObjectType;
+import puma.rest.domain.ResponseType;
 import puma.util.timing.TimerFactory;
 
 import com.codahale.metrics.Timer;
@@ -58,11 +51,10 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 
 	private static final String CENTRAL_PUMA_PDP_HOST = "puma-central-puma-pdp";
 
-	private static final int CENTRAL_PUMA_PDP_THRIFT_PORT = 9091;
+	private static final String CENTRAL_PUMA_PDP_PORT = "8080";
 
-	RemotePDPService.Client client;
+	private CentralPDPClient client = new CentralPDPClient(CENTRAL_PUMA_PDP_HOST + ":" + CENTRAL_PUMA_PDP_PORT, "xacml");
 
-	TTransport transport;
 
 	/**
 	 * Our logger
@@ -70,48 +62,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 	private final Logger logger = Logger.getLogger(PDP.class.getName());
 
 	public CentralPUMAThriftPolicyEvaluatorModule() {
-		setupCentralPUMAPDPConnection();
-	}
-
-	/**
-	 * Idempotent helper function to set up the RMI connection to the central
-	 * PUMA PDP.
-	 */
-	private void setupCentralPUMAPDPConnection() {
-		if (!isCentralPUMAPDPConnectionOK()) {
-			// set up Thrift
-			transport = new TSocket(CENTRAL_PUMA_PDP_HOST,
-					CENTRAL_PUMA_PDP_THRIFT_PORT);
-			try {
-				transport.open();
-			} catch (TTransportException e) {
-				logger.log(Level.WARNING,
-						"FAILED to reach the central PUMA PDP", e);
-				e.printStackTrace();
-			}
-
-			TProtocol protocol = new TBinaryProtocol(transport);
-			client = new RemotePDPService.Client(protocol);
-			logger.info("Set up Thrift client to Central PUMA PDP");
-		}
-	}
-
-	/**
-	 * Helper function that returns whether the RMI connection to the central
-	 * PUMA PDP is set up or not.
-	 */
-	private boolean isCentralPUMAPDPConnectionOK() {
-		return client != null;
-	}
-
-	/**
-	 * Resets the central PUMA connection so that isCentralPUMAPDPConnectionOK()
-	 * returns false and the connection can be set up again using
-	 * setupCentralPUMAPDPConnection().
-	 */
-	private void resetCentralPUMAPDPConnection() {
-		transport.close();
-		client = null;
+		
 	}
 
 	/**
@@ -187,51 +138,33 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 			return new Result(Result.DECISION_NOT_APPLICABLE);
 		}
 
-		// try to set up the RMI connection every time (idempotent!)
-		setupCentralPUMAPDPConnection();
-		if (!isCentralPUMAPDPConnectionOK()) {
-			logger.log(Level.SEVERE,
-					"The RMI connection to the remote PUMA PDP was not set up => default deny");
-			return new Result(Result.DECISION_DENY);
-		}
 
 		// 1. build the request
 		// NOTE not used: RequestType request = context.getRequest();
 		// 2. build the cached attributes
-		List<AttributeValueP> cachedAttributes = convertCachedAttributes(context
+		List<AttributeValue> cachedAttributes = convertCachedAttributes(context
 				.getRawCachedAttributes());
 		// 3. ask for a response
-		ResponseTypeP response;
+		ResponseType response;
 		Timer.Context timerCtx = TimerFactory.getInstance()
 				.getTimer(getClass(), "remotepdp.total").time();
 		try {
-			response = client.evaluateP(cachedAttributes);
-		} catch (TException e) {
+			response = client.evaluate(cachedAttributes);
+		} catch (Exception e) {
 			logger.log(
 					Level.WARNING,
-					"TException when contacting the remote PUMA PDP, trying to set up connection again",
+					"Exception when contacting the remote PUMA PDP => default deny",
 					e);
-			resetCentralPUMAPDPConnection();
-			setupCentralPUMAPDPConnection();
-			// try again
-			try {
-				response = client.evaluateP(cachedAttributes);
-			} catch (TException e1) {
-				logger.log(
-						Level.WARNING,
-						"Again TException when contacting the remote PUMA PDP => default deny",
-						e);
-				return new Result(Result.DECISION_DENY);
-			}
+			return new Result(Result.DECISION_DENY);
 		} finally {
 			timerCtx.stop();
 		}
 		// 4. process the response
-		if (response == ResponseTypeP.DENY) {
+		if (response == ResponseType.DENY) {
 			return new Result(Result.DECISION_DENY);
-		} else if (response == ResponseTypeP.PERMIT) {
+		} else if (response == ResponseType.PERMIT) {
 			return new Result(Result.DECISION_PERMIT);
-		} else if (response == ResponseTypeP.NOT_APPLICABLE) {
+		} else if (response == ResponseType.NOT_APPLICABLE) {
 			return new Result(Result.DECISION_NOT_APPLICABLE);
 		} else {
 			return new Result(Result.DECISION_INDETERMINATE);
@@ -239,15 +172,15 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<AttributeValueP> convertCachedAttributes(
+	private List<AttributeValue> convertCachedAttributes(
 			Collection<CachedAttribute> cachedAttributes) {
 		// preprocess the input
-		List<AttributeValueP> values = new LinkedList<AttributeValueP>();
+		List<AttributeValue> values = new LinkedList<AttributeValue>();
 		for (CachedAttribute ca : cachedAttributes) {
 			String type = ca.getType();
-			ObjectTypeP oType = inferObjectType(ca);
+			ObjectType oType = inferObjectType(ca);
 			if (type.equals(StringAttribute.identifier)) {
-				AttributeValueP avp = new AttributeValueP(DataTypeP.STRING, oType, MultiplicityP.GROUPED,
+				AttributeValue avp = new AttributeValue(DataType.STRING, oType, Multiplicity.GROUPED,
 						ca.getId());
 				for (StringAttribute av : (Collection<StringAttribute>) ca
 						.getValue().getValue()) {
@@ -255,7 +188,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 				}
 				values.add(avp);
 			} else if (type.equals(IntegerAttribute.identifier)) {
-				AttributeValueP avp = new AttributeValueP(DataTypeP.INTEGER, oType, MultiplicityP.GROUPED,
+				AttributeValue avp = new AttributeValue(DataType.INTEGER, oType, Multiplicity.GROUPED,
 						ca.getId());
 				for (IntegerAttribute av : (Collection<IntegerAttribute>) ca
 						.getValue().getValue()) {
@@ -263,7 +196,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 				}
 				values.add(avp);
 			} else if (type.equals(BooleanAttribute.identifier)) {
-				AttributeValueP avp = new AttributeValueP(DataTypeP.BOOLEAN, oType, MultiplicityP.GROUPED,
+				AttributeValue avp = new AttributeValue(DataType.BOOLEAN, oType, Multiplicity.GROUPED,
 						ca.getId());
 				for (BooleanAttribute av : (Collection<BooleanAttribute>) ca
 						.getValue().getValue()) {
@@ -271,7 +204,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 				}
 				values.add(avp);
 			} else if (type.equals(DateTimeAttribute.identifier)) {
-				AttributeValueP avp = new AttributeValueP(DataTypeP.DATETIME, oType, MultiplicityP.GROUPED,
+				AttributeValue avp = new AttributeValue(DataType.DATETIME, oType, Multiplicity.GROUPED,
 						ca.getId());
 				for (DateTimeAttribute av : (Collection<DateTimeAttribute>) ca
 						.getValue().getValue()) {
@@ -284,7 +217,7 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 				}
 				values.add(avp);
 			} else if (type.equals(DoubleAttribute.identifier)) {
-				AttributeValueP avp = new AttributeValueP(DataTypeP.DOUBLE, oType, MultiplicityP.GROUPED, ca.getId());
+				AttributeValue avp = new AttributeValue(DataType.DOUBLE, oType, Multiplicity.GROUPED, ca.getId());
 				for (DoubleAttribute av : (Collection<DoubleAttribute>) ca.getValue().getValue()) {
 					avp.addToDoubleValues(av.getValue());
 				}
@@ -296,19 +229,19 @@ public class CentralPUMAThriftPolicyEvaluatorModule extends
 		return values;
 	}
 	
-	private ObjectTypeP inferObjectType(CachedAttribute attr) {
+	private ObjectType inferObjectType(CachedAttribute attr) {
 		if(attr.getId().contains("subject:"))
-			return ObjectTypeP.SUBJECT;
+			return ObjectType.SUBJECT;
 		else if(attr.getId().contains("object:"))
-			return ObjectTypeP.RESOURCE;
+			return ObjectType.RESOURCE;
 		else if(attr.getId().contains("resource:"))
-			return ObjectTypeP.RESOURCE;
+			return ObjectType.RESOURCE;
 		else if(attr.getId().contains("action:"))
-			return ObjectTypeP.ACTION;
+			return ObjectType.ACTION;
 		else if(attr.getId().contains("environment:"))
-			return ObjectTypeP.ENVIRONMENT;
+			return ObjectType.ENVIRONMENT;
 		else if(attr.getId().contains("env:"))
-			return ObjectTypeP.ENVIRONMENT;
+			return ObjectType.ENVIRONMENT;
 		else
 			throw new RuntimeException("Cannot infer whether subject/action/object/environment for cached attribute \"" + attr +"\"");
 	}
